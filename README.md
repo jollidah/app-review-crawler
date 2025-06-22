@@ -54,16 +54,16 @@ A high-performance, asynchronous Rust application for crawling app reviews from 
 Grab the latest release binaries for your platform:
 
 - **macOS (aarch64)**  
-  [app-review-crawler-aarch64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-aarch64-apple-darwin.tar.gz)
+  [app-review-crawler-aarch64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/download/release%2Fv0.0.1/app-review-crawler-v0.0.1-aarch64-apple-darwin.tar.gz)
 
 - **macOS (x86_64)**  
-  [app-review-crawler-x86_64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-apple-darwin.tar.gz)
+  [app-review-crawler-x86_64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/download/release%2Fv0.0.1/app-review-crawler-v0.0.1-x86_64-apple-darwin.tar.gz)
 
 - **Windows (x86_64)**  
-  [app-review-crawler-x86_64-pc-windows-msvc.zip](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-pc-windows-msvc.zip)
+  [app-review-crawler-x86_64-pc-windows-msvc.zip](https://github.com/jollidah/app-review-crawler/releases/download/release%2Fv0.0.1/app-review-crawler-v0.0.1-x86_64-pc-windows-msvc.zip)
 
 - **Linux (x86_64)**  
-  [app-review-crawler-x86_64-unknown-linux-gnu.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-unknown-linux-gnu.tar.gz)
+  [app-review-crawler-x86_64-unknown-linux-gnu.tar.gz](https://github.com/jollidah/app-review-crawler/releases/download/release%2Fv0.0.1/app-review-crawler-v0.0.1-x86_64-unknown-linux-gnu.tar.gz)
 
 ### Quick Start with Binary
 

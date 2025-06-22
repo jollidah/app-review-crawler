@@ -59,7 +59,7 @@ jobs:
           restore-keys: ${{ runner.os }}-cargo-target-
 
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: actions-rs/toolchain@v3
         with:
           toolchain: stable
           override: true
@@ -166,7 +166,7 @@ jobs:
           path: dist
 
       - name: Create Release and Upload
-        uses: ncipollo/release-action@v1
+        uses: ncipollo/release-action@v3
         with:
           tag: ${{ github.ref_name }}
           artifacts: 'dist/**/*'
