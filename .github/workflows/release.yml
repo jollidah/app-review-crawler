@@ -1,12 +1,13 @@
 name: Build and Release Binaries
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      - 'release/v*'
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}  
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,16 +18,12 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            archive: tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
-            archive: zip
           - os: macos-latest
             target: aarch64-apple-darwin
-            archive: zip
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            archive: zip
 
     env:
       BINARY_NAME: app-review-crawler
@@ -63,18 +60,24 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package artifacts
+      - name: Package (Unix/macOS)
+        if: runner.os != 'Windows'
         run: |
+          # remove prefix (release) 
+          TAG=${GITHUB_REF#refs/heads/release/}
+
           mkdir -p dist/${{ matrix.target }}
-          if [ "${{ runner.os }}" != 'Windows' ]; then
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} dist/${{ matrix.target }}/
-            tar czf dist/${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
-              -C dist/${{ matrix.target }} .
-          else
-            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe dist/${{ matrix.target }}/
-            powershell Compress-Archive -Path dist/${{ matrix.target }}/* \
-              -DestinationPath dist/${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip
-          fi
+          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} dist/${{ matrix.target }}/
+          tar czf dist/${{ env.BINARY_NAME }}-${TAG}-${{ matrix.target }}.tar.gz \
+            -C dist/${{ matrix.target }} .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist\${{ matrix.target }} -Force | Out-Null
+          Copy-Item target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe dist\${{ matrix.target }}\
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -90,6 +93,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: dist
+
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
