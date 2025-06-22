@@ -56,58 +56,13 @@ impl TExtractData for AppStoreReview {
         loop {
             match reader.read_event() {
                 Ok(Event::Start(ref e)) => {
-                    match e.name() {
-                        QName(b"entry") => {
-                            in_entry = true;
-                            current = AppStoreReview::new();
-                            crate::log_debug!("Enter <entry>");
-                        }
-                        QName(b"title") if in_entry => {
-                            if let Ok(txt) = reader.read_text(e.name()) {
-                                current.title = txt.to_string();
-                            }
-                        }
-                        QName(b"content") if in_entry => {
-                            // type="text"인 content만
-                            if let Some(Attribute { key: _, value: _ }) =
-                                e.attributes().filter_map(Result::ok).find(|attr| {
-                                    attr.key == QName(b"type") && attr.value.as_ref() == b"text"
-                                })
-                            {
-                                if let Ok(txt) = reader.read_text(e.name()) {
-                                    current.review = txt.to_string();
-                                }
-                            }
-                        }
-                        QName(b"im:rating") if in_entry => {
-                            if let Ok(txt) = reader.read_text(e.name()) {
-                                current.star = txt.parse().unwrap_or(0);
-                            }
-                        }
-                        QName(b"im:voteSum") if in_entry => {
-                            if let Ok(txt) = reader.read_text(e.name()) {
-                                current.like = txt.parse().unwrap_or(0);
-                            }
-                        }
-                        QName(b"im:voteCount") if in_entry => {
-                            if let Ok(txt) = reader.read_text(e.name()) {
-                                let total: i32 = txt.parse().unwrap_or(0);
-                                current.dislike = total.saturating_sub(current.like);
-                            }
-                        }
-                        QName(b"updated") if in_entry => {
-                            if let Ok(txt) = reader.read_text(e.name()) {
-                                current.date = txt.to_string();
-                            }
-                        }
-                        _ => {}
-                    }
+                    Self::handle_start_event(e, &mut reader, &mut current, &mut in_entry);
                 }
 
                 Ok(Event::End(ref e)) if e.name() == QName(b"entry") => {
-                    // entry가 끝나면 완성된 리뷰를 저장
+                    // push the completed review
                     crate::log_debug!("Exit </entry>: {:?}", current);
-                    // 필수 필드(title, review)가 있으면 푸쉬
+                    // if the required fields (title, review) are present, push
                     if !current.title.is_empty() && !current.review.is_empty() {
                         reviews.push(current.clone());
                     } else {
@@ -135,6 +90,76 @@ impl TExtractData for AppStoreReview {
         }
 
         Ok(reviews)
+    }
+}
+
+impl AppStoreReview {
+    fn handle_start_event(
+        e: &quick_xml::events::BytesStart,
+        reader: &mut Reader<&[u8]>,
+        current: &mut AppStoreReview,
+        in_entry: &mut bool,
+    ) {
+        match e.name() {
+            QName(b"entry") => {
+                *in_entry = true;
+                *current = AppStoreReview::new();
+                crate::log_debug!("Enter <entry>");
+            }
+            QName(b"title") if *in_entry => {
+                Self::read_text_field(reader, e.name(), &mut current.title);
+            }
+            QName(b"content") if *in_entry => {
+                Self::handle_content_element(reader, e, current);
+            }
+            QName(b"im:rating") if *in_entry => {
+                Self::read_numeric_field(reader, e.name(), &mut current.star);
+            }
+            QName(b"im:voteSum") if *in_entry => {
+                Self::read_numeric_field(reader, e.name(), &mut current.like);
+            }
+            QName(b"im:voteCount") if *in_entry => {
+                Self::handle_vote_count(reader, e.name(), current);
+            }
+            QName(b"updated") if *in_entry => {
+                Self::read_text_field(reader, e.name(), &mut current.date);
+            }
+            _ => {}
+        }
+    }
+
+    fn read_text_field(reader: &mut Reader<&[u8]>, name: QName, field: &mut String) {
+        if let Ok(txt) = reader.read_text(name) {
+            *field = txt.to_string();
+        }
+    }
+
+    fn read_numeric_field(reader: &mut Reader<&[u8]>, name: QName, field: &mut i32) {
+        if let Ok(txt) = reader.read_text(name) {
+            *field = txt.parse().unwrap_or(0);
+        }
+    }
+
+    fn handle_content_element(
+        reader: &mut Reader<&[u8]>,
+        e: &quick_xml::events::BytesStart,
+        current: &mut AppStoreReview,
+    ) {
+        // type="text"인 content만
+        if let Some(Attribute { key: _, value: _ }) = e
+            .attributes()
+            .filter_map(Result::ok)
+            .find(|attr| attr.key == QName(b"type") && attr.value.as_ref() == b"text")
+        {
+            Self::read_text_field(reader, e.name(), &mut current.review);
+        }
+    }
+
+    fn handle_vote_count(reader: &mut Reader<&[u8]>, name: QName, current: &mut AppStoreReview) {
+        if let Ok(txt) = reader.read_text(name) {
+            let total: i32 = txt.parse().unwrap_or(0);
+            current.dislike = total.saturating_sub(current.like);
+        }
     }
 }
 

@@ -37,7 +37,7 @@ impl TStoreType for PlayStoreReview {
 
 impl TExtractData for PlayStoreReview {
     fn extract_data(&self, _response: &[u8]) -> Result<Vec<Self>, CrawlerError> {
-        // TODO: Play Store 리뷰 파싱 로직 구현
+        // TODO: Play Store review parsing not implemented yet
         todo!("Play Store review parsing not implemented yet")
     }
 }

@@ -4,7 +4,10 @@ use crate::{
     response_processor::{
         app_store::AppStoreReview, play_store::PlayStoreReview, RawResponse, ResponseProcessor,
     },
-    review_crawler::Crawler,
+    review_crawler::{
+        traits::{HasAppInfo, TBuildRequest},
+        Crawler,
+    },
     target_app::load_target_apps,
 };
 
@@ -16,6 +19,60 @@ mod logger;
 
 const TARGET_APPS_PATH: &str = "target_apps.json";
 const OUTPUT_PATH: &str = "output";
+const APP_STORE_MAX_PAGES: u32 = 10;
+const GOOGLE_PLAY_MAX_PAGES: u32 = 100;
+
+async fn run_store_crawler<C, D, F>(store_name: &str, apps: Vec<C>, make_extractor: F)
+where
+    C: TBuildRequest + HasAppInfo + Clone + Send + 'static,
+    D: response_processor::traits::TExtractData
+        + response_processor::traits::TStoreType
+        + Send
+        + 'static,
+    F: Fn() -> D,
+{
+    crate::log_info!("Starting {} crawler task", store_name);
+    crate::log_info!("Found {} {} apps to crawl", apps.len(), store_name);
+
+    for (i, app) in apps.iter().enumerate() {
+        crate::log_info!(
+            "Crawling {} app {}/{}: {} (country: {})",
+            store_name,
+            i + 1,
+            apps.len(),
+            app.app_id(),
+            app.country()
+        );
+
+        let app_id = app.app_id().to_string();
+        let mut crawler = Crawler::new(app.clone());
+
+        match crawler.run().await {
+            Ok(response) => {
+                crate::log_info!("Successfully got response for app: {}", app_id);
+                let processor: ResponseProcessor<D> = ResponseProcessor::new(
+                    RawResponse::new(response),
+                    make_extractor(),
+                    app_id.clone(),
+                );
+
+                match processor.run().await {
+                    Ok(_) => crate::log_info!(
+                        "Successfully processed and saved reviews for app: {}",
+                        app_id
+                    ),
+                    Err(e) => crate::log_error!(
+                        "Failed to process reviews for app {}: {}",
+                        app_id, e
+                    ),
+                }
+            }
+            Err(e) => {
+                crate::log_error!("Failed to crawl app {}: {}", app_id, e);
+            }
+        }
+    }
+}
 
 #[tokio::main]
 async fn main() {
@@ -33,91 +90,13 @@ async fn main() {
     };
 
     task::spawn(async move {
-        crate::log_info!("Starting App Store crawler task");
-        let app_store_apps = target_apps.app_store_apps.read().await.clone();
-        crate::log_info!("Found {} App Store apps to crawl", app_store_apps.len());
-
-        for (i, app) in app_store_apps.iter().enumerate() {
-            crate::log_info!(
-                "Crawling App Store app {}/{}: {} (country: {})",
-                i + 1,
-                app_store_apps.len(),
-                app.app_id,
-                app.country
-            );
-
-            let app_id = app.app_id.clone();
-            let mut crawler = Crawler::new(app.clone());
-
-            match crawler.run().await {
-                Ok(response) => {
-                    crate::log_info!("Successfully got response for app: {}", app_id);
-                    let processor: ResponseProcessor<AppStoreReview> = ResponseProcessor::new(
-                        RawResponse::new(response),
-                        AppStoreReview::new(),
-                        app_id.clone(),
-                    );
-
-                    match processor.run().await {
-                        Ok(_) => crate::log_info!(
-                            "Successfully processed and saved reviews for app: {}",
-                            app_id
-                        ),
-                        Err(e) => crate::log_error!(
-                            "Failed to process reviews for app {}: {}",
-                            app_id, e
-                        ),
-                    }
-                }
-                Err(e) => {
-                    crate::log_error!("Failed to crawl app {}: {}", app_id, e);
-                }
-            }
-        }
+        let apps = target_apps.app_store_apps.read().await.clone();
+        run_store_crawler("App Store", apps, AppStoreReview::new).await;
     });
 
     task::spawn(async move {
-        crate::log_info!("Starting Play Store crawler task");
-        let play_store_apps = target_apps.play_store_apps.read().await.clone();
-        crate::log_info!("Found {} Play Store apps to crawl", play_store_apps.len());
-
-        for (i, app) in play_store_apps.iter().enumerate() {
-            crate::log_info!(
-                "Crawling Play Store app {}/{}: {} (country: {})",
-                i + 1,
-                play_store_apps.len(),
-                app.app_id,
-                app.country
-            );
-
-            let app_id = app.app_id.clone();
-            let mut crawler = Crawler::new(app.clone());
-
-            match crawler.run().await {
-                Ok(response) => {
-                    crate::log_info!("Successfully got response for app: {}", app_id);
-                    let processor: ResponseProcessor<PlayStoreReview> = ResponseProcessor::new(
-                        RawResponse::new(response),
-                        PlayStoreReview::new(),
-                        app_id.clone(),
-                    );
-
-                    match processor.run().await {
-                        Ok(_) => crate::log_info!(
-                            "Successfully processed and saved reviews for app: {}",
-                            app_id
-                        ),
-                        Err(e) => crate::log_error!(
-                            "Failed to process reviews for app {}: {}",
-                            app_id, e
-                        ),
-                    }
-                }
-                Err(e) => {
-                    crate::log_error!("Failed to crawl app {}: {}", app_id, e);
-                }
-            }
-        }
+        let apps = target_apps.play_store_apps.read().await.clone();
+        run_store_crawler("Play Store", apps, PlayStoreReview::new).await;
     });
 
     // 메인 스레드가 종료되지 않도록 잠시 대기

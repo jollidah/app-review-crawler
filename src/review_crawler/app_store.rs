@@ -1,7 +1,10 @@
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
-use crate::review_crawler::{get_client, traits::TBuildReqeust};
+use crate::{
+    review_crawler::{get_client, HasAppInfo, TBuildRequest},
+    APP_STORE_MAX_PAGES,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppStoreClient {
@@ -11,7 +14,17 @@ pub struct AppStoreClient {
     pub pages: u32,
 }
 
-impl TBuildReqeust for AppStoreClient {
+impl HasAppInfo for AppStoreClient {
+    fn app_id(&self) -> &str {
+        &self.app_id
+    }
+
+    fn country(&self) -> &str {
+        &self.country
+    }
+}
+
+impl TBuildRequest for AppStoreClient {
     fn build_request(&mut self) -> RequestBuilder {
         get_client().get(format!(
             "https://itunes.apple.com/{}/rss/customerreviews/id={}/page={}/sortby=mostrecent/xml",
@@ -19,7 +32,7 @@ impl TBuildReqeust for AppStoreClient {
         ))
     }
     fn has_more_pages(&self) -> bool {
-        self.pages <= 10
+        self.pages <= APP_STORE_MAX_PAGES
     }
     fn increment_page(&mut self) {
         self.pages += 1;
@@ -46,14 +59,14 @@ mod tests {
         assert!(client.has_more_pages());
 
         // Test pagination through all pages
-        for expected_page in 1..=10 {
+        for expected_page in 1..=APP_STORE_MAX_PAGES {
             assert_eq!(client.get_current_page(), expected_page);
             assert!(client.has_more_pages());
             client.increment_page();
         }
 
         // After 10 pages, should not have more pages
-        assert_eq!(client.get_current_page(), 11);
+        assert_eq!(client.get_current_page(), APP_STORE_MAX_PAGES + 1);
         assert!(!client.has_more_pages());
     }
 

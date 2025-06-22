@@ -1,7 +1,10 @@
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
-use crate::review_crawler::{get_client, traits::TBuildReqeust};
+use crate::{
+    review_crawler::{get_client, HasAppInfo, TBuildRequest},
+    GOOGLE_PLAY_MAX_PAGES,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayStoreClient {
@@ -11,7 +14,16 @@ pub struct PlayStoreClient {
     pub pages: u32,
 }
 
-impl TBuildReqeust for PlayStoreClient {
+impl HasAppInfo for PlayStoreClient {
+    fn app_id(&self) -> &str {
+        &self.app_id
+    }
+    fn country(&self) -> &str {
+        &self.country
+    }
+}
+
+impl TBuildRequest for PlayStoreClient {
     fn build_request(&mut self) -> RequestBuilder {
         // Play Store API endpoint (placeholder - needs actual implementation)
         get_client()
@@ -20,15 +32,12 @@ impl TBuildReqeust for PlayStoreClient {
                 self.country, self.country, self.pages, self.app_id
             ))
     }
-
     fn has_more_pages(&self) -> bool {
-        self.pages <= 100
+        self.pages <= GOOGLE_PLAY_MAX_PAGES
     }
-
     fn increment_page(&mut self) {
         self.pages += 1;
     }
-
     fn get_current_page(&self) -> u32 {
         self.pages
     }
@@ -51,14 +60,14 @@ mod tests {
         assert!(client.has_more_pages());
 
         // Test pagination through all pages (100 for Play Store)
-        for expected_page in 0..=100 {
+        for expected_page in 0..=GOOGLE_PLAY_MAX_PAGES {
             assert_eq!(client.get_current_page(), expected_page);
             assert!(client.has_more_pages());
             client.increment_page();
         }
 
         // After 100 pages, should not have more pages
-        assert_eq!(client.get_current_page(), 101);
+        assert_eq!(client.get_current_page(), GOOGLE_PLAY_MAX_PAGES + 1);
         assert!(!client.has_more_pages());
     }
 
