@@ -41,7 +41,7 @@ impl TStoreType for AppStoreReview {
 
 impl TExtractData for AppStoreReview {
     fn extract_data(&self, response: &[u8]) -> Result<Vec<Self>, CrawlerError> {
-        println!("[DEBUG] Starting XML parsing with quick-xml");
+        crate::log_debug!("Starting XML parsing with quick-xml");
 
         let mut reader = Reader::from_reader(response);
         reader.trim_text(true);
@@ -60,7 +60,7 @@ impl TExtractData for AppStoreReview {
                         QName(b"entry") => {
                             in_entry = true;
                             current = AppStoreReview::new();
-                            println!("[DEBUG] Enter <entry>");
+                            crate::log_debug!("Enter <entry>");
                         }
                         QName(b"title") if in_entry => {
                             if let Ok(txt) = reader.read_text(e.name()) {
@@ -106,26 +106,26 @@ impl TExtractData for AppStoreReview {
 
                 Ok(Event::End(ref e)) if e.name() == QName(b"entry") => {
                     // entry가 끝나면 완성된 리뷰를 저장
-                    println!("[DEBUG] Exit </entry>: {:?}", current);
+                    crate::log_debug!("Exit </entry>: {:?}", current);
                     // 필수 필드(title, review)가 있으면 푸쉬
                     if !current.title.is_empty() && !current.review.is_empty() {
                         reviews.push(current.clone());
                     } else {
-                        println!("[DEBUG] Skipped incomplete entry");
+                        crate::log_debug!("Skipped incomplete entry");
                     }
                     in_entry = false;
                 }
 
                 Ok(Event::Eof) => {
-                    println!(
-                        "[DEBUG] XML parsing completed. Found {} reviews",
+                    crate::log_debug!(
+                        "XML parsing completed. Found {} reviews",
                         reviews.len()
                     );
                     break;
                 }
 
                 Err(e) => {
-                    println!("[ERROR] XML parsing error: {}", e);
+                    crate::log_error!("XML parsing error: {}", e);
                     return Err(CrawlerError::Parse(e.to_string()));
                 }
 
