@@ -5,7 +5,6 @@ use crate::{
     response_processor::{
         app_store::AppStoreReview, play_store::PlayStoreReview, RawResponse, ResponseProcessor,
     },
-    crate::logger::init();
     review_crawler::{
         traits::{HasAppInfo, TBuildRequest},
         Crawler,
@@ -18,7 +17,6 @@ mod logger;
 mod response_processor;
 mod review_crawler;
 mod target_app;
-mod logger;
 
 // * System constants
 const TARGET_APPS_PATH: &str = "target_apps.json";
