@@ -1,9 +1,13 @@
 name: Build and Release Binaries
 
 on:
-  push:
-    branches:
-      - 'release/v*'
+  release:
+    types: [created]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}  
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -13,16 +17,39 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            archive: tar.gz
           - os: macos-latest
             target: x86_64-apple-darwin
+            archive: zip
           - os: macos-latest
             target: aarch64-apple-darwin
+            archive: zip
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            archive: zip
+
+    env:
+      BINARY_NAME: app-review-crawler
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Cache Cargo registry and git index
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-registry-
+
+      - name: Cache build output
+        uses: actions/cache@v3
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-target-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-target-
 
       - name: Setup Rust toolchain
         uses: actions-rs/toolchain@v1
@@ -30,44 +57,41 @@ jobs:
           toolchain: stable
           override: true
 
-      - name: Install target
+      - name: Add target
         run: rustup target add ${{ matrix.target }}
 
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package (Unix/macOS)
-        if: runner.os != 'Windows'
+      - name: Package artifacts
         run: |
           mkdir -p dist/${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/app-review-crawler dist/${{ matrix.target }}/
-          tar czf dist/app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          if [ "${{ runner.os }}" != 'Windows' ]; then
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} dist/${{ matrix.target }}/
+            tar czf dist/${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.tar.gz \
+              -C dist/${{ matrix.target }} .
+          else
+            cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }}.exe dist/${{ matrix.target }}/
+            powershell Compress-Archive -Path dist/${{ matrix.target }}/* \
+              -DestinationPath dist/${{ env.BINARY_NAME }}-${{ github.ref_name }}-${{ matrix.target }}.zip
+          fi
 
-      - name: Package (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path dist\${{ matrix.target }} -Force | Out-Null
-          Copy-Item target\${{ matrix.target }}\release\app-review-crawler.exe dist\${{ matrix.target }}\
-          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.zip
-
-      - name: Upload build artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: app-review-crawler-${{ matrix.target }}
+          name: ${{ env.BINARY_NAME }}-${{ matrix.target }}
           path: dist/**
 
   publish:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download all build artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
-
-      - name: Create Release and Upload
+      - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
-          artifacts: 'dist/**/*'
+          artifacts: dist/**
