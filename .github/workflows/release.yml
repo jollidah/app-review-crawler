@@ -70,7 +70,8 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Extract version
+      - name: Extract version (Unix/macOS)
+        if: runner.os != 'Windows'
         run: |
           # Extract version from release ref
           if [[ "$GITHUB_REF" == refs/heads/release/v* ]]; then
@@ -84,6 +85,23 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "GITHUB_REF: $GITHUB_REF"
           echo "Extracted version: $VERSION"
+
+      - name: Extract version (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Extract version from release ref
+          if ("$env:GITHUB_REF" -like "refs/heads/release/v*") {
+            $VERSION = "$env:GITHUB_REF" -replace "^refs/heads/release/v", ""
+          } elseif ("$env:GITHUB_REF" -like "refs/tags/release/v*") {
+            $VERSION = "$env:GITHUB_REF" -replace "^refs/tags/release/v", ""
+          } else {
+            Write-Error "Error: Not a release branch or tag: $env:GITHUB_REF"
+            exit 1
+          }
+          $env:VERSION = $VERSION
+          Write-Output "GITHUB_REF: $env:GITHUB_REF"
+          Write-Output "Extracted version: $VERSION"
 
       - name: Package (Unix/macOS)
         if: runner.os != 'Windows'
