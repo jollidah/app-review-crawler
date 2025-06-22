@@ -1,9 +1,11 @@
 use tokio::task;
+use tracing::Instrument;
 
 use crate::{
     response_processor::{
         app_store::AppStoreReview, play_store::PlayStoreReview, RawResponse, ResponseProcessor,
     },
+    crate::logger::init();
     review_crawler::{
         traits::{HasAppInfo, TBuildRequest},
         Crawler,
@@ -49,8 +51,8 @@ where
 
         match crawler.run().await {
             Ok(response) => {
-                crate::log_info!("Successfully got response for app: {}", app_id);
-                let processor: ResponseProcessor<D> = ResponseProcessor::new(
+    }.instrument(crate::logger::span("AppStore")));
+    }.instrument(crate::logger::span("PlayStore")));
                     RawResponse::new(response),
                     make_extractor(),
                     app_id.clone(),
