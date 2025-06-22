@@ -73,6 +73,13 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Extract version
+        run: |
+          # Extract version from ref (remove 'release/v' prefix)
+          VERSION=${GITHUB_REF#refs/heads/release/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
       - name: Package (Unix/macOS)
         if: runner.os != 'Windows'
         run: |
@@ -98,7 +105,7 @@ jobs:
           ls -la dist/${{ matrix.target }}/
           
           # Create tar.gz with version number for release
-          tar czf dist/app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          tar czf dist/app-review-crawler-v${{ env.VERSION }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
           
           # Also create version-less file for latest links
           tar czf dist/app-review-crawler-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
@@ -116,7 +123,7 @@ jobs:
           
           Copy-Item target\${{ matrix.target }}\release\app-review-crawler.exe dist\${{ matrix.target }}\
           
-          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.zip -Force
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-v${{ env.VERSION }}-${{ matrix.target }}.zip -Force
           Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ matrix.target }}.zip -Force
 
       - name: Upload build artifacts
