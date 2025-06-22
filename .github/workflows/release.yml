@@ -78,6 +78,7 @@ jobs:
         run: |
           # Clean dist directory first
           rm -rf dist
+          mkdir -p dist
           mkdir -p dist/${{ matrix.target }}
           
           # Debug: list what's in the target directory
