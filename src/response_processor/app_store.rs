@@ -41,7 +41,7 @@ impl TStoreType for AppStoreReview {
 
 impl TExtractData for AppStoreReview {
     fn extract_data(&self, response: &[u8]) -> Result<Vec<Self>, CrawlerError> {
-        crate::log_debug!("Starting XML parsing with quick-xml");
+        tracing::debug!("Starting XML parsing with quick-xml");
 
         let mut reader = Reader::from_reader(response);
         reader.trim_text(true);
@@ -61,26 +61,23 @@ impl TExtractData for AppStoreReview {
 
                 Ok(Event::End(ref e)) if e.name() == QName(b"entry") => {
                     // push the completed review
-                    crate::log_debug!("Exit </entry>: {:?}", current);
+                    tracing::debug!("Exit </entry>: {:?}", current);
                     // if the required fields (title, review) are present, push
                     if !current.title.is_empty() && !current.review.is_empty() {
                         reviews.push(current.clone());
                     } else {
-                        crate::log_debug!("Skipped incomplete entry");
+                        tracing::debug!("Skipped incomplete entry");
                     }
                     in_entry = false;
                 }
 
                 Ok(Event::Eof) => {
-                    crate::log_debug!(
-                        "XML parsing completed. Found {} reviews",
-                        reviews.len()
-                    );
+                    tracing::debug!("XML parsing completed. Found {} reviews", reviews.len());
                     break;
                 }
 
                 Err(e) => {
-                    crate::log_error!("XML parsing error: {}", e);
+                    tracing::error!("XML parsing error: {}", e);
                     return Err(CrawlerError::Parse(e.to_string()));
                 }
 
@@ -104,7 +101,7 @@ impl AppStoreReview {
             QName(b"entry") => {
                 *in_entry = true;
                 *current = AppStoreReview::new();
-                crate::log_debug!("Enter <entry>");
+                tracing::debug!("Enter <entry>");
             }
             QName(b"title") if *in_entry => {
                 Self::read_text_field(reader, e.name(), &mut current.title);

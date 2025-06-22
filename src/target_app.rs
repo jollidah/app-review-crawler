@@ -24,66 +24,66 @@ pub struct Clients {
 }
 
 pub fn load_target_apps(path: &str) -> Result<Clients, CrawlerError> {
-    crate::log_debug!("Starting load_target_apps with path: {}", path);
+    tracing::debug!("Starting load_target_apps with path: {}", path);
 
     // 파일 열기
-    crate::log_debug!("Attempting to open file: {}", path);
+    tracing::debug!("Attempting to open file: {}", path);
     let file = match File::open(path) {
         Ok(file) => {
-            crate::log_debug!("Successfully opened file");
+            tracing::debug!("Successfully opened file");
             file
         }
         Err(e) => {
-            crate::log_error!("Failed to open file: {}", e);
+            tracing::error!("Failed to open file: {}", e);
             return Err(CrawlerError::ConfigLoad(e.to_string()));
         }
     };
 
     let reader = BufReader::new(file);
-    crate::log_debug!("Created BufReader");
+    tracing::debug!("Created BufReader");
 
     // JSON 파싱
-    crate::log_debug!("Attempting to parse JSON");
+    tracing::debug!("Attempting to parse JSON");
     let config: ClientsConfig = match serde_json::from_reader(reader) {
         Ok(config) => {
-            crate::log_debug!("Successfully parsed JSON");
+            tracing::debug!("Successfully parsed JSON");
             config
         }
         Err(e) => {
-            crate::log_error!("Failed to parse JSON: {}", e);
+            tracing::error!("Failed to parse JSON: {}", e);
             return Err(CrawlerError::ConfigLoad(e.to_string()));
         }
     };
 
-    crate::log_debug!("Parsed config: {:?}", config);
+    tracing::debug!("Parsed config: {:?}", config);
 
     // App Store 앱들 처리
-    crate::log_debug!("Processing app_store apps");
+    tracing::debug!("Processing app_store apps");
     let app_store_apps = match &config.app_store {
         Some(apps) => {
-            crate::log_debug!("Found {} app_store apps", apps.len());
+            tracing::debug!("Found {} app_store apps", apps.len());
             RwLock::new(apps.clone())
         }
         None => {
-            crate::log_debug!("No app_store apps found, using empty vector");
+            tracing::debug!("No app_store apps found, using empty vector");
             RwLock::new(Vec::new())
         }
     };
 
     // Play Store 앱들 처리
-    crate::log_debug!("Processing play_store apps");
+    tracing::debug!("Processing play_store apps");
     let play_store_apps = match &config.play_store {
         Some(apps) => {
-            crate::log_debug!("Found {} play_store apps", apps.len());
+            tracing::debug!("Found {} play_store apps", apps.len());
             RwLock::new(apps.clone())
         }
         None => {
-            crate::log_debug!("No play_store apps found, using empty vector");
+            tracing::debug!("No play_store apps found, using empty vector");
             RwLock::new(Vec::new())
         }
     };
 
-    crate::log_debug!("Successfully created Clients struct");
+    tracing::debug!("Successfully created Clients struct");
     Ok(Clients {
         app_store_apps,
         play_store_apps,

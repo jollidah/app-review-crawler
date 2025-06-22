@@ -13,18 +13,15 @@ categories = ["web-programming", "api-bindings", "data-processing"]
 readme = "README.md"
 
 [dependencies]
-reqwest = { version = "0.11", features = ["json"] }
-tokio = { version = "1.0", features = ["full"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-quick-xml = { version = "0.31", features = ["serialize"] }
-csv = "1.3"
-chrono = { version = "0.4", features = ["serde"] }
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["fmt", "ansi"] }
-
-[dev-dependencies]
-tokio-test = "0.4"
+reqwest = { version = "*", features = ["json"] }
+tokio = { version = "*", features = ["full"] }
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+quick-xml = { version = "*", features = ["serialize"] }
+csv = "*"
+chrono = { version = "*", features = ["serde"] }
+tracing = "*"
+tracing-subscriber = { version = "*", features = ["fmt", "ansi"] }
 
 [[bin]]
 name = "app-review-crawler"
