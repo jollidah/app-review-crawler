@@ -49,7 +49,43 @@ A high-performance, asynchronous Rust application for crawling app reviews from 
    cargo run --release
    ```
 
-## 📁 Project Structure
+## 📥 Downloads
+
+Grab the latest release binaries for your platform:
+
+- **macOS (aarch64)**  
+  [app-review-crawler-aarch64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-aarch64-apple-darwin.tar.gz)
+
+- **macOS (x86_64)**  
+  [app-review-crawler-x86_64-apple-darwin.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-apple-darwin.tar.gz)
+
+- **Windows (x86_64)**  
+  [app-review-crawler-x86_64-pc-windows-msvc.zip](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-pc-windows-msvc.zip)
+
+- **Linux (x86_64)**  
+  [app-review-crawler-x86_64-unknown-linux-gnu.tar.gz](https://github.com/jollidah/app-review-crawler/releases/latest/download/app-review-crawler-x86_64-unknown-linux-gnu.tar.gz)
+
+### Quick Start with Binary
+
+1. **Download** the appropriate binary for your platform
+2. **Extract** the archive:
+   ```bash
+   # macOS/Linux
+   tar -xzf app-review-crawler-v0.0.1-*.tar.gz
+   
+   # Windows
+   # Extract the .zip file using your preferred tool
+   ```
+3. **Make executable** (macOS/Linux):
+   ```bash
+   chmod +x app-review-crawler
+   ```
+4. **Run** the application:
+   ```bash
+   ./app-review-crawler
+   ```
+
+## 📋 Project Structure
 
 ```
 app-review-crawler/

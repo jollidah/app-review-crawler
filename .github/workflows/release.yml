@@ -8,6 +8,12 @@ on:
     branches:
       - 'release/v*'
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode (no actual release)'
+        required: false
+        default: 'false'
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -16,6 +22,7 @@ concurrency:
 jobs:
   build:
     runs-on: ${{ matrix.os }}
+    if: github.event_name == 'push' && (startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/tags/release/'))
     strategy:
       matrix:
         include:
@@ -63,33 +70,84 @@ jobs:
       - name: Build release binary
         run: cargo build --release --target ${{ matrix.target }}
 
+      - name: Extract version (Unix/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          # Extract version from release ref
+          if [[ "$GITHUB_REF" == refs/heads/release/v* ]]; then
+            VERSION=${GITHUB_REF#refs/heads/release/v}
+          elif [[ "$GITHUB_REF" == refs/tags/release/v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/release/v}
+          else
+            echo "Error: Not a release branch or tag: $GITHUB_REF"
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "GITHUB_REF: $GITHUB_REF"
+          echo "Extracted version: $VERSION"
+
+      - name: Extract version (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          # Extract version from release ref
+          if ("$env:GITHUB_REF" -like "refs/heads/release/v*") {
+            $VERSION = "$env:GITHUB_REF" -replace "^refs/heads/release/v", ""
+          } elseif ("$env:GITHUB_REF" -like "refs/tags/release/v*") {
+            $VERSION = "$env:GITHUB_REF" -replace "^refs/tags/release/v", ""
+          } else {
+            Write-Error "Error: Not a release branch or tag: $env:GITHUB_REF"
+            exit 1
+          }
+          $env:VERSION = $VERSION
+          Write-Output "GITHUB_REF: $env:GITHUB_REF"
+          Write-Output "Extracted version: $VERSION"
+
       - name: Package (Unix/macOS)
         if: runner.os != 'Windows'
         run: |
-          TAG=${GITHUB_REF#refs/heads/release/}
-
+          # Clean dist directory first
+          rm -rf dist
+          mkdir -p dist
           mkdir -p dist/${{ matrix.target }}
-          cp target/${{ matrix.target }}/release/${{ env.BINARY_NAME }} dist/${{ matrix.target }}/
-          tar czf dist/${{ env.BINARY_NAME }}-${TAG}-${{ matrix.target }}.tar.gz \
-            -C dist/${{ matrix.target }} .
+          
+          # Debug: list what's in the target directory
+          ls -la target/${{ matrix.target }}/release/
+          
+          # Copy the binary (handle different possible names)
+          if [ -f "target/${{ matrix.target }}/release/app-review-crawler" ]; then
+            cp target/${{ matrix.target }}/release/app-review-crawler dist/${{ matrix.target }}/
+          elif [ -f "target/${{ matrix.target }}/release/app-review-crawler.exe" ]; then
+            cp target/${{ matrix.target }}/release/app-review-crawler.exe dist/${{ matrix.target }}/
+          else
+            echo "Error: Binary not found in target/${{ matrix.target }}/release/"
+            exit 1
+          fi
+          
+          # Debug: list what's in dist directory
+          ls -la dist/${{ matrix.target }}/
+          
+          # Create tar.gz with version number for release
+          tar czf dist/app-review-crawler-v${{ env.VERSION }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          
+          # Also create version-less file for latest links
+          tar czf dist/app-review-crawler-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          
+          # Debug: list created files
+          ls -la dist/*.tar.gz
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # remove refs/heads/release/ prefix
-          $TAG = "${Env:GITHUB_REF}" -replace '^refs/heads/release/',''
-
-          # create dist/<target> 
+          # Clean dist directory first
+          if (Test-Path dist) { Remove-Item -Recurse -Force dist }
           New-Item -ItemType Directory -Path dist\${{ matrix.target }} -Force | Out-Null
-
-          # copy binary
-          Copy-Item target\${{ matrix.target }}\release\${{ env.BINARY_NAME }}.exe `
-            -Destination dist\${{ matrix.target }}\
-
-          # zip with no slash in TAG
-          $zipPath = "dist\${{ env.BINARY_NAME }}-$TAG-${{ matrix.target }}.zip"
-          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath $zipPath
+          
+          Copy-Item target\${{ matrix.target }}\release\app-review-crawler.exe dist\${{ matrix.target }}\
+          
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-v${{ env.VERSION }}-${{ matrix.target }}.zip -Force
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ matrix.target }}.zip -Force
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -100,14 +158,15 @@ jobs:
   publish:
     needs: build
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/release/')
     steps:
-      - name: Download artifacts
+      - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
           path: dist
 
-      - name: Create GitHub Release
+      - name: Create Release and Upload
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ github.ref_name }}
-          artifacts: dist/**
+          artifacts: 'dist/**/*'
