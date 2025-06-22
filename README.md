@@ -185,10 +185,10 @@ async fn main() {
             );
             
             if let Err(e) = processor.run().await {
-                eprintln!("Failed to process reviews: {}", e);
+                crate::log_error!("Failed to process reviews: {}", e);
             }
         }
-        Err(e) => eprintln!("Failed to crawl: {}", e),
+        Err(e) => crate::log_error!("Failed to crawl: {}", e),
     }
 }
 ```

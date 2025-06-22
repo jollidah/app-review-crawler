@@ -23,7 +23,7 @@ impl<C: TBuildRequest> Crawler<C> {
 
         // 페이지가 10이 될 때까지 계속 크롤링
         while self.client.has_more_pages() {
-            println!("[DEBUG] Crawling page {}", self.client.get_current_page());
+            crate::log_debug!("Crawling page {}", self.client.get_current_page());
 
             let response = self
                 .client

@@ -1,9 +1,11 @@
 use tokio::task;
+use tracing::Instrument;
 
 use crate::{
     response_processor::{
         app_store::AppStoreReview, play_store::PlayStoreReview, RawResponse, ResponseProcessor,
     },
+    crate::logger::init();
     review_crawler::{
         traits::{HasAppInfo, TBuildRequest},
         Crawler,
@@ -15,6 +17,7 @@ mod errors;
 mod response_processor;
 mod review_crawler;
 mod target_app;
+mod logger;
 
 const TARGET_APPS_PATH: &str = "target_apps.json";
 const OUTPUT_PATH: &str = "output";
@@ -30,12 +33,12 @@ where
         + 'static,
     F: Fn() -> D,
 {
-    println!("[INFO] Starting {} crawler task", store_name);
-    println!("[INFO] Found {} {} apps to crawl", apps.len(), store_name);
+    crate::log_info!("Starting {} crawler task", store_name);
+    crate::log_info!("Found {} {} apps to crawl", apps.len(), store_name);
 
     for (i, app) in apps.iter().enumerate() {
-        println!(
-            "[INFO] Crawling {} app {}/{}: {} (country: {})",
+        crate::log_info!(
+            "Crawling {} app {}/{}: {} (country: {})",
             store_name,
             i + 1,
             apps.len(),
@@ -48,26 +51,26 @@ where
 
         match crawler.run().await {
             Ok(response) => {
-                println!("[INFO] Successfully got response for app: {}", app_id);
-                let processor: ResponseProcessor<D> = ResponseProcessor::new(
+    }.instrument(crate::logger::span("AppStore")));
+    }.instrument(crate::logger::span("PlayStore")));
                     RawResponse::new(response),
                     make_extractor(),
                     app_id.clone(),
                 );
 
                 match processor.run().await {
-                    Ok(_) => println!(
-                        "[INFO] Successfully processed and saved reviews for app: {}",
+                    Ok(_) => crate::log_info!(
+                        "Successfully processed and saved reviews for app: {}",
                         app_id
                     ),
-                    Err(e) => println!(
-                        "[ERROR] Failed to process reviews for app {}: {}",
+                    Err(e) => crate::log_error!(
+                        "Failed to process reviews for app {}: {}",
                         app_id, e
                     ),
                 }
             }
             Err(e) => {
-                println!("[ERROR] Failed to crawl app {}: {}", app_id, e);
+                crate::log_error!("Failed to crawl app {}: {}", app_id, e);
             }
         }
     }
@@ -75,15 +78,15 @@ where
 
 #[tokio::main]
 async fn main() {
-    println!("[INFO] Starting app review crawler...");
+    crate::log_info!("Starting app review crawler...");
 
     let target_apps = match load_target_apps(TARGET_APPS_PATH) {
         Ok(apps) => {
-            println!("[INFO] Successfully loaded target apps");
+            crate::log_info!("Successfully loaded target apps");
             apps
         }
         Err(e) => {
-            println!("[ERROR] Failed to load target apps: {}", e);
+            crate::log_error!("Failed to load target apps: {}", e);
             return;
         }
     };
@@ -100,5 +103,5 @@ async fn main() {
 
     // 메인 스레드가 종료되지 않도록 잠시 대기
     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    println!("[INFO] Crawler finished");
+    crate::log_info!("Crawler finished");
 }
