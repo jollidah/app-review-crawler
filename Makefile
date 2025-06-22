@@ -3,5 +3,5 @@
 EXPORT = export RUSTPATH=$(PWD)
 
 checks:
-	$(EXPORT) && cargo fmt
+	$(EXPORT) && cargo fmt --all -- --check
 	$(EXPORT) && cargo clippy
