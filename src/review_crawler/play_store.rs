@@ -1,7 +1,7 @@
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
-use crate::review_crawler::{get_client, traits::TBuildReqeust};
+use crate::review_crawler::{get_client, HasAppInfo, TBuildRequest};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayStoreClient {
@@ -11,7 +11,17 @@ pub struct PlayStoreClient {
     pub pages: u32,
 }
 
-impl TBuildReqeust for PlayStoreClient {
+impl HasAppInfo for PlayStoreClient {
+    fn app_id(&self) -> &str {
+        &self.app_id
+    }
+
+    fn country(&self) -> &str {
+        &self.country
+    }
+}
+
+impl TBuildRequest for PlayStoreClient {
     fn build_request(&mut self) -> RequestBuilder {
         // Play Store API endpoint (placeholder - needs actual implementation)
         get_client()

@@ -2,17 +2,18 @@ use std::sync::OnceLock;
 
 use reqwest::{Client, Response};
 
-use crate::{errors::CrawlerError, review_crawler::traits::TBuildReqeust};
+use crate::errors::CrawlerError;
 
 pub mod app_store;
 pub mod play_store;
-mod traits;
+pub mod traits;
+pub use traits::{HasAppInfo, TBuildRequest};
 
-pub struct Crawler<C: TBuildReqeust> {
+pub struct Crawler<C: TBuildRequest> {
     client: C,
 }
 
-impl<C: TBuildReqeust> Crawler<C> {
+impl<C: TBuildRequest> Crawler<C> {
     pub fn new(client: C) -> Self {
         Self { client }
     }
