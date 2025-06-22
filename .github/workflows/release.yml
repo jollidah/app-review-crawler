@@ -1,0 +1,75 @@
+name: Build and Release Binaries
+
+on:
+  push:
+    branches:
+      - 'release/v*'
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Build release binary
+        run: cargo build --release --target ${{ matrix.target }}
+
+      - name: Package (Unix/macOS)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p dist/${{ matrix.target }}
+          cp target/${{ matrix.target }}/release/app-review-crawler dist/${{ matrix.target }}/
+          tar czf dist/app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist\${{ matrix.target }} -Force | Out-Null
+          Copy-Item target\${{ matrix.target }}\release\app-review-crawler.exe dist\${{ matrix.target }}\
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.zip
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: app-review-crawler-${{ matrix.target }}
+          path: dist/**
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: dist
+
+      - name: Create Release and Upload
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          artifacts: 'dist/**/*'
