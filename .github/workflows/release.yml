@@ -76,9 +76,13 @@ jobs:
       - name: Package (Unix/macOS)
         if: runner.os != 'Windows'
         run: |
+          # Clean dist directory first
+          rm -rf dist
           mkdir -p dist/${{ matrix.target }}
+          
           # Debug: list what's in the target directory
           ls -la target/${{ matrix.target }}/release/
+          
           # Copy the binary (handle different possible names)
           if [ -f "target/${{ matrix.target }}/release/app-review-crawler" ]; then
             cp target/${{ matrix.target }}/release/app-review-crawler dist/${{ matrix.target }}/
@@ -88,21 +92,31 @@ jobs:
             echo "Error: Binary not found in target/${{ matrix.target }}/release/"
             exit 1
           fi
+          
           # Debug: list what's in dist directory
           ls -la dist/${{ matrix.target }}/
+          
           # Create tar.gz with version number for release
           tar czf dist/app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          
           # Also create version-less file for latest links
           tar czf dist/app-review-crawler-${{ matrix.target }}.tar.gz -C dist/${{ matrix.target }} .
+          
+          # Debug: list created files
+          ls -la dist/*.tar.gz
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # Clean dist directory first
+          if (Test-Path dist) { Remove-Item -Recurse -Force dist }
           New-Item -ItemType Directory -Path dist\${{ matrix.target }} -Force | Out-Null
+          
           Copy-Item target\${{ matrix.target }}\release\app-review-crawler.exe dist\${{ matrix.target }}\
-          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.zip
-          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ matrix.target }}.zip
+          
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ github.ref_name }}-${{ matrix.target }}.zip -Force
+          Compress-Archive -Path dist\${{ matrix.target }}\* -DestinationPath dist\app-review-crawler-${{ matrix.target }}.zip -Force
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
