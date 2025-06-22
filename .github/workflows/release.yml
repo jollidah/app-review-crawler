@@ -1,5 +1,8 @@
 name: Build and Release Binaries
 
+permissions:
+  contents: write    # permission required for release, artifacts upload, etc.
+
 on:
   push:
     branches:
