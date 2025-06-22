@@ -1,4 +1,5 @@
 use tokio::task;
+use tracing::Instrument;
 
 use crate::{
     response_processor::{
@@ -12,15 +13,19 @@ use crate::{
 };
 
 mod errors;
+mod logger;
 mod response_processor;
 mod review_crawler;
 mod target_app;
-mod logger;
 
+// * System constants
 const TARGET_APPS_PATH: &str = "target_apps.json";
 const OUTPUT_PATH: &str = "output";
 const APP_STORE_MAX_PAGES: u32 = 10;
 const GOOGLE_PLAY_MAX_PAGES: u32 = 100;
+
+// * Logging level
+const LOG_LEVEL: tracing::Level = tracing::Level::DEBUG;
 
 async fn run_store_crawler<C, D, F>(store_name: &str, apps: Vec<C>, make_extractor: F)
 where
@@ -31,11 +36,11 @@ where
         + 'static,
     F: Fn() -> D,
 {
-    crate::log_info!("Starting {} crawler task", store_name);
-    crate::log_info!("Found {} {} apps to crawl", apps.len(), store_name);
+    tracing::info!("Starting {} crawler task", store_name);
+    tracing::info!("Found {} {} apps to crawl", apps.len(), store_name);
 
     for (i, app) in apps.iter().enumerate() {
-        crate::log_info!(
+        tracing::info!(
             "Crawling {} app {}/{}: {} (country: {})",
             store_name,
             i + 1,
@@ -49,7 +54,7 @@ where
 
         match crawler.run().await {
             Ok(response) => {
-                crate::log_info!("Successfully got response for app: {}", app_id);
+                tracing::info!("Successfully got response for app: {}", app_id);
                 let processor: ResponseProcessor<D> = ResponseProcessor::new(
                     RawResponse::new(response),
                     make_extractor(),
@@ -57,18 +62,17 @@ where
                 );
 
                 match processor.run().await {
-                    Ok(_) => crate::log_info!(
+                    Ok(_) => tracing::info!(
                         "Successfully processed and saved reviews for app: {}",
                         app_id
                     ),
-                    Err(e) => crate::log_error!(
-                        "Failed to process reviews for app {}: {}",
-                        app_id, e
-                    ),
+                    Err(e) => {
+                        tracing::error!("Failed to process reviews for app {}: {}", app_id, e)
+                    }
                 }
             }
             Err(e) => {
-                crate::log_error!("Failed to crawl app {}: {}", app_id, e);
+                tracing::error!("Failed to crawl app {}: {}", app_id, e);
             }
         }
     }
@@ -76,30 +80,36 @@ where
 
 #[tokio::main]
 async fn main() {
-    crate::log_info!("Starting app review crawler...");
-
+    crate::logger::init(LOG_LEVEL);
+    tracing::info!("Starting app review crawler...");
     let target_apps = match load_target_apps(TARGET_APPS_PATH) {
         Ok(apps) => {
-            crate::log_info!("Successfully loaded target apps");
+            tracing::info!("Successfully loaded target apps");
             apps
         }
         Err(e) => {
-            crate::log_error!("Failed to load target apps: {}", e);
+            tracing::error!("Failed to load target apps: {}", e);
             return;
         }
     };
 
-    task::spawn(async move {
-        let apps = target_apps.app_store_apps.read().await.clone();
-        run_store_crawler("App Store", apps, AppStoreReview::new).await;
-    });
+    task::spawn(
+        async move {
+            let apps = target_apps.app_store_apps.read().await.clone();
+            run_store_crawler("App Store", apps, AppStoreReview::new).await;
+        }
+        .instrument(tracing::info_span!("App Store crawler")),
+    );
 
-    task::spawn(async move {
-        let apps = target_apps.play_store_apps.read().await.clone();
-        run_store_crawler("Play Store", apps, PlayStoreReview::new).await;
-    });
+    task::spawn(
+        async move {
+            let apps = target_apps.play_store_apps.read().await.clone();
+            run_store_crawler("Play Store", apps, PlayStoreReview::new).await;
+        }
+        .instrument(tracing::info_span!("Play Store crawler")),
+    );
 
-    // 메인 스레드가 종료되지 않도록 잠시 대기
+    // Sleep to keep the main thread alive
     tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-    crate::log_info!("Crawler finished");
+    tracing::info!("Crawler finished");
 }

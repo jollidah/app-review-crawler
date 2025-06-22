@@ -46,7 +46,7 @@ impl<D: TExtractData + TStoreType> ResponseProcessor<D> {
 
         // 모든 응답에서 데이터 추출
         for (i, response) in self.data.responses.into_iter().enumerate() {
-            crate::log_debug!("Processing response {}/{}", i + 1, responses_count);
+            tracing::debug!("Processing response {}/{}", i + 1, responses_count);
 
             let bytes = response
                 .bytes()

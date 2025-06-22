@@ -2,7 +2,7 @@ use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    review_crawler::{get_client, HasAppInfo, TBuildRequest},
+    review_crawler::{get_client, get_default_pages, HasAppInfo, TBuildRequest},
     GOOGLE_PLAY_MAX_PAGES,
 };
 
@@ -10,7 +10,7 @@ use crate::{
 pub struct PlayStoreClient {
     pub app_id: String,
     pub country: String,
-    #[serde(default)]
+    #[serde(default = "get_default_pages")]
     pub pages: u32,
 }
 
@@ -52,21 +52,21 @@ mod tests {
         let mut client = PlayStoreClient {
             app_id: "test_app".to_string(),
             country: "us".to_string(),
-            pages: 0,
+            pages: 1,
         };
 
         // Test initial state
-        assert_eq!(client.get_current_page(), 0);
+        assert_eq!(client.get_current_page(), 1);
         assert!(client.has_more_pages());
 
-        // Test pagination through all pages (100 for Play Store)
-        for expected_page in 0..=GOOGLE_PLAY_MAX_PAGES {
+        // Test pagination through all pages (1 to 100)
+        for expected_page in 1..=GOOGLE_PLAY_MAX_PAGES {
             assert_eq!(client.get_current_page(), expected_page);
             assert!(client.has_more_pages());
             client.increment_page();
         }
 
-        // After 100 pages, should not have more pages
+        // After 100 pages (1-100), should not have more pages
         assert_eq!(client.get_current_page(), GOOGLE_PLAY_MAX_PAGES + 1);
         assert!(!client.has_more_pages());
     }

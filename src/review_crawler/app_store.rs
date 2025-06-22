@@ -2,7 +2,7 @@ use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    review_crawler::{get_client, HasAppInfo, TBuildRequest},
+    review_crawler::{get_client, get_default_pages, HasAppInfo, TBuildRequest},
     APP_STORE_MAX_PAGES,
 };
 
@@ -10,7 +10,7 @@ use crate::{
 pub struct AppStoreClient {
     pub app_id: String,
     pub country: String,
-    #[serde(default)]
+    #[serde(default = "get_default_pages")]
     pub pages: u32,
 }
 

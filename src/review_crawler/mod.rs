@@ -23,7 +23,7 @@ impl<C: TBuildRequest> Crawler<C> {
 
         // 페이지가 10이 될 때까지 계속 크롤링
         while self.client.has_more_pages() {
-            crate::log_debug!("Crawling page {}", self.client.get_current_page());
+            tracing::debug!("Crawling page {}", self.client.get_current_page());
 
             let response = self
                 .client
@@ -34,9 +34,6 @@ impl<C: TBuildRequest> Crawler<C> {
 
             responses.push(response);
             self.client.increment_page();
-
-            // Add a short delay to avoid rate limiting
-            tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }
 
         Ok(responses)
@@ -46,4 +43,8 @@ impl<C: TBuildRequest> Crawler<C> {
 pub fn get_client() -> &'static Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
     CLIENT.get_or_init(Client::new)
+}
+
+pub(crate) fn get_default_pages() -> u32 {
+    1
 }
