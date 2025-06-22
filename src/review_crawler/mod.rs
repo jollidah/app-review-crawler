@@ -2,17 +2,18 @@ use std::sync::OnceLock;
 
 use reqwest::{Client, Response};
 
-use crate::{errors::CrawlerError, review_crawler::traits::TBuildReqeust};
+use crate::errors::CrawlerError;
 
 pub mod app_store;
 pub mod play_store;
-mod traits;
+pub mod traits;
+pub use traits::{HasAppInfo, TBuildRequest};
 
-pub struct Crawler<C: TBuildReqeust> {
+pub struct Crawler<C: TBuildRequest> {
     client: C,
 }
 
-impl<C: TBuildReqeust> Crawler<C> {
+impl<C: TBuildRequest> Crawler<C> {
     pub fn new(client: C) -> Self {
         Self { client }
     }
@@ -34,7 +35,7 @@ impl<C: TBuildReqeust> Crawler<C> {
             responses.push(response);
             self.client.increment_page();
 
-            // 요청 간 짧은 딜레이 추가 (rate limiting 방지)
+            // Add a short delay to avoid rate limiting
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }
 
