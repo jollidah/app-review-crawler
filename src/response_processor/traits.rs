@@ -26,20 +26,20 @@ where
     let output_path = PathBuf::from(store_type.get_output_path(app_id));
     if let Some(parent) = output_path.parent() {
         fs::create_dir_all(parent)
-            .map_err(|e| CrawlerError::Request(format!("Failed to create directory: {}", e)))?;
+            .map_err(|e| CrawlerError::Request(format!("Failed to create directory: {e}")))?;
     }
 
     // CSV 파일 작성
     let mut wtr = csv::Writer::from_path(&output_path)
-        .map_err(|e| CrawlerError::Request(format!("Failed to create CSV file: {}", e)))?;
+        .map_err(|e| CrawlerError::Request(format!("Failed to create CSV file: {e}")))?;
 
     for item in data {
         wtr.serialize(item)
-            .map_err(|e| CrawlerError::Request(format!("Failed to serialize data: {}", e)))?;
+            .map_err(|e| CrawlerError::Request(format!("Failed to serialize data: {e}")))?;
     }
 
     wtr.flush()
-        .map_err(|e| CrawlerError::Request(format!("Failed to flush CSV file: {}", e)))?;
+        .map_err(|e| CrawlerError::Request(format!("Failed to flush CSV file: {e}")))?;
 
     Ok(())
 }
