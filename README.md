@@ -9,7 +9,6 @@ A high-performance, asynchronous Rust application for crawling app reviews from 
 - **Pagination Support**: Automatically handles multiple pages of reviews (up to 10 pages for App Store, 100 for Play Store)
 - **CSV Export**: Saves reviews in structured CSV format for easy analysis
 - **Configurable**: Easy configuration through JSON files
-- **Error Handling**: Robust error handling with detailed logging
 - **Rate Limiting**: Built-in delays to respect API limits
 
 > **⚠️ Note**: Play Store crawling is currently a placeholder implementation and not fully functional. Only App Store crawling is fully implemented and tested.
@@ -21,8 +20,6 @@ A high-performance, asynchronous Rust application for crawling app reviews from 
 | Review Crawling | ✅ Fully Working | ❌ Placeholder Only |
 | Pagination | ✅ Up to 10 pages | ❌ Not Implemented |
 | CSV Export | ✅ Working | ❌ Not Implemented |
-| Error Handling | ✅ Robust | ❌ Basic |
-| Rate Limiting | ✅ Implemented | ❌ Not Implemented |
 
 **Currently, only App Store review crawling is fully functional and tested.**
 
@@ -118,25 +115,21 @@ Create a `target_apps.json` file in the project root to specify which apps to cr
   "app_store_apps": [
     {
       "app_id": "1194408342",
-      "country": "us",
-      "pages": 0
+      "country": "us"
     },
     {
       "app_id": "284882215",
-      "country": "kr",
-      "pages": 0
+      "country": "kr"
     }
   ],
   "play_store_apps": [
     {
       "app_id": "com.whatsapp",
-      "country": "us",
-      "pages": 0
+      "country": "us"
     },
     {
       "app_id": "com.instagram.android",
-      "country": "kr",
-      "pages": 0
+      "country": "kr"
     }
   ]
 }
@@ -150,7 +143,6 @@ Create a `target_apps.json` file in the project root to specify which apps to cr
   - App Store: Numeric ID (e.g., "1194408342")
   - Play Store: Package name (e.g., "com.whatsapp")
 - **country**: Two-letter country code (e.g., "us", "kr", "jp")
-- **pages**: Starting page number (usually 0 or 1)
 
 ## 📊 Output Format
 
@@ -205,8 +197,7 @@ async fn main() {
     // Create a crawler for a specific app
     let mut client = AppStoreClient {
         app_id: "1194408342".to_string(),
-        country: "us".to_string(),
-        pages: 0,
+        country: "us".to_string()
     };
     
     let mut crawler = Crawler::new(client);
@@ -252,10 +243,6 @@ The application provides detailed logging:
 - `[DEBUG]`: Detailed debugging information
 - `[ERROR]`: Error messages and failures
 
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
 ### Development Setup
 
 1. Fork the repository
@@ -288,11 +275,7 @@ This tool is for educational and research purposes. Please ensure you comply wit
 ## 🔮 Roadmap
 
 - [ ] **Complete Play Store implementation** (Currently placeholder only)
-- [ ] Add support for more app stores
-- [ ] Implement review filtering and search
 - [ ] Add database storage option
-- [ ] Create web dashboard
-- [ ] Add review sentiment analysis
 - [ ] Support for review replies and developer responses
 
 ## 📞 Support
