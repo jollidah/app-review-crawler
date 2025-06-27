@@ -31,7 +31,7 @@ impl PlayStoreReview {
 
 impl TStoreType for PlayStoreReview {
     fn get_output_path(&self, app_id: &str) -> String {
-        format!("{}/play_store/{}.csv", OUTPUT_PATH, app_id)
+        format!("{OUTPUT_PATH}/play_store/{app_id}.csv")
     }
 }
 
