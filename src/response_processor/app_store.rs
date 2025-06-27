@@ -35,7 +35,7 @@ impl AppStoreReview {
 
 impl TStoreType for AppStoreReview {
     fn get_output_path(&self, app_id: &str) -> String {
-        format!("{}/app_store/{}.csv", OUTPUT_PATH, app_id)
+        format!("{OUTPUT_PATH}/app_store/{app_id}.csv")
     }
 }
 
