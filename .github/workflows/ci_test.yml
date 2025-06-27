@@ -36,18 +36,18 @@ jobs:
           ${{ runner.os }}-cargo-
 
     - name: formatting
-      uses: actions-rs/cargo@v3
+      uses: actions-rs/cargo@v1
       with:
         command: fmt
         args: --all -- --check
 
     - name: linting
-      uses: actions-rs/cargo@v3
+      uses: actions-rs/cargo@v1
       with:
         command: clippy
         args: -- -D warnings
     
     - name: Test 
-      uses: actions-rs/cargo@v3
+      uses: actions-rs/cargo@v1
       with:
         command: test
